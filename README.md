@@ -1,5 +1,8 @@
 # JZ01-45-@ / JZ0145_V33 OpenStick Installer
 
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/6e227542-9f37-4585-99e8-424e0f8cd237" />
+
+
 One-click installer for running **Debian 11 (OpenStick)** on the
 **JZ01-45-@** (a.k.a. **JZ0145_V33**) MSM8916 4G dongle.
 
