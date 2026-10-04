@@ -1,4 +1,4 @@
-# fix_gpt.py - resize rootfs in the OpenStick GPT to fit the @ disk
+# fix_gpt.py - resize rootfs partition in the OpenStick GPT to fit the smaller eMMC
 import struct, zlib, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +19,7 @@ with open(SRC, "rb") as f:
     data = bytearray(f.read())
 
 if data[HDR_OFF:HDR_OFF+8] != b"EFI PART":
-    raise SystemExit("no GPT signature at sector 1")
+    raise SystemExit("no GPT signature")
 
 num_entries = struct.unpack_from("<I", data, HDR_OFF + 80)[0]
 entry_size  = struct.unpack_from("<I", data, HDR_OFF + 84)[0]
@@ -29,11 +29,9 @@ for i in range(num_entries):
     off = ENTRIES_OFF + i * entry_size
     name = data[off+56:off+56+72].decode("utf-16-le").rstrip("\x00")
     if name == "rootfs":
-        idx = i
-        break
-
+        idx = i; break
 if idx is None:
-    raise SystemExit("rootfs entry not found in GPT")
+    raise SystemExit("rootfs not found")
 
 off = ENTRIES_OFF + idx * entry_size
 old_start = struct.unpack_from("<Q", data, off + 32)[0]
