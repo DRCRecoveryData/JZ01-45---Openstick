@@ -3,7 +3,7 @@
 One-click installer for running **Debian 11 (OpenStick)** on the
 **JZ01-45-@** (MSM8916) 4G dongle.
 
-**Tested on:** JZ01-45-@ hardware (IMEI 864894077216761)
+**Tested on:** JZ01-45-@ hardware
 **Result:** Working Debian 11 aarch64, WiFi client, SSH, LEDs, reset button
 
 ---
