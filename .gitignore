@@ -1,0 +1,25 @@
+# Downloaded / generated artifacts
+files/
+output/
+dl/
+edl/
+orig_fw/
+dumps/
+
+# Binary blobs
+*.bin
+*.img
+*.mbn
+*.zip
+*.elf
+*.hex
+
+# Keep docs and scripts
+!docs/*.md
+!LICENSE
+!README.md
+
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
