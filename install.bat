@@ -6,6 +6,200 @@ REM ============================================================
 
 setlocal enabledelayedexpansion
 
+set "WORKDIR=%~dp0"
+if "%WORKDIR:~-1%"=="\" set "WORKDIR=%WORKDIR:~0,-1%"
+
+set EDLDIR=%WORKDIR%\edl
+set FILESDIR=%WORKDIR%\files
+set DLSDIR=%WORKDIR%\dl
+set VENV=%EDLDIR%\venv
+set VPY=%VENV%\Scripts\python.exe
+
+echo.
+echo ============================================================
+echo  JZ01-45-@ OpenStick Installer
+echo ============================================================
+echo  Work directory: %WORKDIR%
+echo.
+
+net session >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Run this script as Administrator.
+    echo         Right-click install.bat -^> Run as administrator
+    pause ^& exit /b 1
+)
+
+set "WORKDIR_NOSPACE=%WORKDIR: =%"
+if not "%WORKDIR%"=="%WORKDIR_NOSPACE%" (
+    echo [ERROR] Install path contains spaces: %WORKDIR%
+    echo         Move the repo to e.g. C:\jz01-openstick and retry.
+    pause ^& exit /b 1
+)
+
+winget --version >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] winget not available. fastboot will need manual install.
+    set HAVE_WINGET=0
+) else (
+    echo [OK] winget available
+    set HAVE_WINGET=1
+)
+
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python not found in PATH.
+    pause ^& exit /b 1
+)
+for /f "tokens=2" %%i in ('python --version 2^>^&1') do set PYVER=%%i
+echo [OK] Python %PYVER%
+
+git --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Git not found in PATH.
+    pause ^& exit /b 1
+)
+echo [OK] Git available
+
+wsl -l -q >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] No WSL distro detected. Attempting install...
+    wsl --install -d Ubuntu
+    echo [INFO] Reboot and re-run install.bat when Ubuntu is ready.
+    pause ^& exit /b 0
+)
+echo [OK] WSL available
+
+echo.
+echo Checking for fastboot...
+fastboot --version >nul 2>&1
+if errorlevel 1 (
+    if "!HAVE_WINGET!"=="1" (
+        echo [WARN] fastboot not found. Installing via winget...
+        winget install --id Google.PlatformTools --accept-source-agreements --accept-package-agreements -e
+        if errorlevel 1 (
+            echo [ERROR] winget install failed.
+            pause ^& exit /b 1
+        )
+    ) else (
+        echo [ERROR] fastboot not found and winget unavailable.
+        pause ^& exit /b 1
+    )
+)
+fastboot --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] fastboot still not on PATH. Reopen a new Admin cmd and rerun.
+    pause ^& exit /b 1
+)
+echo [OK] fastboot available
+
+echo.
+echo [1/7] Creating directories...
+if not exist "%EDLDIR%"   mkdir "%EDLDIR%"
+if not exist "%FILESDIR%" mkdir "%FILESDIR%"
+if not exist "%DLSDIR%"   mkdir "%DLSDIR%"
+echo [OK] Directories ready
+
+echo.
+echo [2/7] Installing EDL tool...
+if not exist "%EDLDIR%\edl.py" (
+    git clone https://github.com/bkerler/edl.git "%EDLDIR%"
+    if errorlevel 1 ( echo [ERROR] git clone failed. ^& pause ^& exit /b 1 )
+)
+if not exist "%VENV%\Scripts\python.exe" (
+    python -m venv "%VENV%"
+    if errorlevel 1 ( echo [ERROR] venv creation failed. ^& pause ^& exit /b 1 )
+)
+"%VPY%" -m pip install --upgrade pip >nul 2>&1
+"%VPY%" -m pip install -r "%EDLDIR%\requirements.txt"
+if errorlevel 1 ( echo [ERROR] pip install failed. ^& pause ^& exit /b 1 )
+echo [OK] EDL tool installed
+
+echo.
+echo [3/7] Downloading OpenStick kernel and rootfs...
+if not exist "%FILESDIR%\boot-ufi001c.img" (
+    echo   - Kernel
+    curl -L -o "%FILESDIR%\boot-ufi001c.img" ^
+        "https://github.com/OpenStick/OpenStick/releases/download/v1/boot-ufi001c.img"
+    if errorlevel 1 ( echo [ERROR] Kernel download failed. ^& pause ^& exit /b 1 )
+)
+if not exist "%DLSDIR%\debian.zip" (
+    echo   - Debian rootfs
+    curl -L -o "%DLSDIR%\debian.zip" ^
+        "https://github.com/OpenStick/OpenStick/releases/download/v1/debian.zip"
+    if errorlevel 1 ( echo [ERROR] Rootfs download failed. ^& pause ^& exit /b 1 )
+)
+echo [OK] OpenStick files downloaded
+
+echo.
+echo [4/7] Downloading DragonBoard bootloader...
+if not exist "%DLSDIR%\db-bootloader.zip" (
+    curl -L -o "%DLSDIR%\db-bootloader.zip" ^
+        "https://storage.lavacloud.io/artifacts/dragonboard-410c/dragonboard-410c-bootloader-emmc-linux-176.zip"
+    if errorlevel 1 ( echo [ERROR] Bootloader download failed. ^& pause ^& exit /b 1 )
+)
+echo [OK] Bootloader downloaded
+
+echo.
+echo [5/7] Downloading prebuilt lk2nd...
+if not exist "%DLSDIR%\prebuilt.zip" (
+    curl -L -o "%DLSDIR%\prebuilt.zip" ^
+        "https://gist.github.com/kinsamanka/0b01cd02412bd13ee072072043d46fa2/raw/prebuilt.zip"
+    if errorlevel 1 ( echo [ERROR] lk2nd download failed. ^& pause ^& exit /b 1 )
+)
+echo [OK] lk2nd downloaded
+
+echo.
+echo [6/7] Extracting files...
+if not exist "%FILESDIR%\rootfs.img" (
+    echo   - Debian rootfs
+    powershell -NoProfile -Command "Expand-Archive -Path '%DLSDIR%\debian.zip' -DestinationPath '%DLSDIR%\db-extract' -Force"
+    move /Y "%DLSDIR%\db-extract\debian\rootfs.img" "%FILESDIR%\rootfs.img" >nul
+)
+if not exist "%FILESDIR%\sbl1.mbn" (
+    echo   - DragonBoard bootloader
+    powershell -NoProfile -Command "Expand-Archive -Path '%DLSDIR%\db-bootloader.zip' -DestinationPath '%DLSDIR%\db-extract' -Force"
+    for %%F in (sbl1.mbn rpm.mbn tz.mbn hyp.mbn sbc_1.0_8016.bin gpt_both0.bin) do (
+        move /Y "%DLSDIR%\db-extract\dragonboard-410c-bootloader-emmc-linux-176\%%F" "%FILESDIR%\" >nul
+    )
+)
+if not exist "%FILESDIR%\emmc_appsboot-test-signed.mbn" (
+    echo   - lk2nd bootloader
+    powershell -NoProfile -Command "Expand-Archive -Path '%DLSDIR%\prebuilt.zip' -DestinationPath '%FILESDIR%' -Force"
+)
+echo [OK] Files extracted
+
+echo.
+echo [7/7] Patching GPT in WSL...
+for /f "usebackq tokens=*" %%p in (`wsl wslpath -u "%WORKDIR%"`) do set "WSLDIR=%%p"
+echo   WSL path: !WSLDIR!
+wsl bash -c "cd '!WSLDIR!' && chmod +x prep.sh && ./prep.sh"
+if errorlevel 1 (
+    echo [WARN] prep.sh failed. Run it manually in WSL:
+    echo        wsl bash -c "cd '!WSLDIR!' ^&^& ./prep.sh"
+)
+
+echo.
+echo ============================================================
+echo  SETUP COMPLETE
+echo ============================================================
+echo.
+echo Next steps:
+echo   1. Put the dongle in EDL mode:
+echo      - Hold reset, plug USB, release after 5 s
+echo      - Bind it to libusb-win32 via Zadig:
+echo          Device: QHSUSB_BULK (05C6 9008)
+echo          Driver: libusb-win32 (v1.2.7.3)
+echo   2. Verify:  edl\venv\Scripts\python edl\edl.py printgpt --memory=eMMC
+echo   3. Flash:   flash_edl.bat
+echo.
+pause@echo off
+REM ============================================================
+REM  JZ01-45-@ OpenStick Installer - Windows Setup
+REM  Run as Administrator
+REM ============================================================
+
+setlocal enabledelayedexpansion
+
 REM --- Normalize WORKDIR: strip trailing backslash from %~dp0 ---
 set "WORKDIR=%~dp0"
 if "%WORKDIR:~-1%"=="\" set "WORKDIR=%WORKDIR:~0,-1%"
