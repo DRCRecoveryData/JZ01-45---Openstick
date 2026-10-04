@@ -1,4 +1,22 @@
-# Downloaded / generated artifacts
+files/
+output/
+dl/
+edl/
+orig_fw/
+dumps/
+*.bin
+*.img
+*.mbn
+*.zip
+*.elf
+*.hex
+!docs/*.md
+!LICENSE
+!README.md
+__pycache__/
+*.pyc
+Thumbs.db
+.DS_Store# Downloaded / generated artifacts
 files/
 output/
 dl/
