@@ -214,6 +214,17 @@ remains the exact same size.
 The button emits `KEY_F1` (code **59**), not `KEY_RESTART` (408). The
 `post_config.sh` listener uses the correct code.
 
+### Reset button
+
+Wired to PM8916 PMIC RESIN_N — not a TLMM GPIO. Hardware reset only.
+
+- Hold at power-on → EDL mode
+- Press at runtime → hard power-cycle
+
+The DTB declares a `gpio-keys` node on GPIO 37 for KEY_RESTART, but
+GPIO 37 is **not connected to any button** on this hardware. Linux
+never sees the reset button press.
+
 ---
 
 ## 🧯 Troubleshooting
