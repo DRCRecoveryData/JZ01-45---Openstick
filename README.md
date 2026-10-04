@@ -29,9 +29,20 @@ One-click installer for running **Debian 11 (OpenStick)** on the
 | WSL2 with Ubuntu | `wsl --install -d Ubuntu` in PowerShell |
 | Python 3.9+ | On Windows, with "Add Python to PATH" checked |
 | Git for Windows | https://git-scm.com/download/win |
+| winget | Ships with Win10 1809+ / Win11. Used to auto-install `fastboot`. |
 | Qualcomm USB Drivers | Or `libusb-win32` via Zadig |
 | ~10 GB free disk | Downloads + firmware backup |
 | USB data cable | Not charge-only |
+
+> **`fastboot` is installed automatically** by `install.bat` via
+> `winget install Google.PlatformTools` if it's not already on your PATH.
+> If winget is unavailable, install Android Platform Tools manually from
+> https://developer.android.com/tools/releases/platform-tools and add it
+> to PATH, then re-run `install.bat`.
+>
+> **`adb` is *not* required** — the installer only uses EDL (`edl`) and
+> `fastboot`. You can install Platform Tools later if you want to poke at
+> the running Debian system over USB.
 
 ---
 
